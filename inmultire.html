@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Înmulțire - MateQuiz 2026</title>
+    <link href="fonts.googleapis.com" rel="stylesheet">
+    <style>
+        :root { 
+            --bg: #05050a; 
+            --card: rgba(26, 26, 46, 0.8); 
+            --accent: #e94560; 
+            --green: #27ae60; 
+            --blue: #2980b9; 
+            --text: #ffffff; 
+        }
+
+        body { 
+            font-family: 'Poppins', sans-serif; 
+            background: var(--bg); 
+            background-image: 
+                radial-gradient(circle at 10% 20%, #1a1a4e 0%, transparent 25%),
+                radial-gradient(circle at 90% 80%, #4e1a1a 0%, transparent 25%);
+            color: var(--text); 
+            display: flex; 
+            justify-content: center; 
+            align-items: center; 
+            min-height: 100vh; 
+            margin: 0; 
+        }
+
+        .container { 
+            background: var(--card); 
+            backdrop-filter: blur(15px);
+            padding: 2.5rem; 
+            border-radius: 24px; 
+            text-align: center; 
+            width: 90%; 
+            max-width: 450px; 
+            box-shadow: 0 20px 50px rgba(0,0,0,0.6); 
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .hidden { display: none; }
+        h1 { font-weight: 700; color: var(--accent); margin-bottom: 20px; text-transform: uppercase; }
+
+        input, select { 
+            width: 100%; padding: 14px; margin: 10px 0; border-radius: 10px; 
+            border: 1px solid rgba(255,255,255,0.1); background: rgba(0,0,0,0.3); 
+            color: white; font-size: 1.1rem; text-align: center; box-sizing: border-box;
+        }
+
+        button { 
+            width: 100%; padding: 16px; margin-top: 15px; border: none; border-radius: 12px; 
+            cursor: pointer; font-weight: 700; color: white; text-transform: uppercase;
+        }
+
+        #btn-start { background: linear-gradient(135deg, var(--green), #2ecc71); }
+        #btn-check { background: linear-gradient(135deg, var(--blue), #3498db); }
+        
+        #question { 
+            font-size: 4.5rem; font-weight: 700; margin: 25px 0; color: #f1c40f; 
+            text-shadow: 0 0 25px rgba(241, 196, 15, 0.4);
+        }
+
+        #progress { color: #aaa; font-size: 0.9rem; }
+        #message { height: 35px; font-size: 1.2rem; font-weight: 600; margin-top: 10px; }
+    </style>
+</head>
+<body>
+
+    <!-- ECRAN START -->
+    <div id="screen-start" class="container">
+        <h1>ÎNMULȚIRE</h1>
+        <input type="text" id="input-name" placeholder="Numele tău (Elev)..." maxlength="20">
+        <input type="text" id="input-prof" placeholder="Ex: Învățătoarea Popescu Maria">
+        <select id="select-nr">
+            <option value="20">20 întrebări</option>
+            <option value="50">50 întrebări</option>
+            <option value="100">100 întrebări</option>
+        </select>
+        <button id="btn-start">CONECTARE LA ÎNVĂȚĂTOR/ARE</button>
+    </div>
+
+    <!-- ECRAN JOC -->
+    <div id="screen-game" class="container hidden">
+        <div id="progress">-- / --</div>
+        <div id="question">-- × --</div>
+        <div id="message"></div>
+        <input type="number" id="input-ans" placeholder="Răspuns..." inputmode="numeric">
+        <button id="btn-check">VERIFICĂ</button>
+    </div>
+
+    <!-- ECRAN FINAL -->
+    <div id="screen-final" class="container hidden">
+        <h1>FINALIZAT</h1>
+        <div id="result-info" style="font-size: 1.5rem; margin-bottom: 25px; line-height: 1.6;"></div>
+        <button onclick="location.reload()" style="background: linear-gradient(135deg, #8e44ad, #9b59b6);">REIA TESTUL</button>
+    </div>
+
+    <script>
+        let corecte = 0, index = 0, total = 0, numeElev = "", numeProfSalvat = "";
+        let a, b, rezultatCorect;
+
+        document.getElementById('btn-start').onclick = () => {
+            const inputProf = document.getElementById('input-prof').value.trim();
+            numeElev = document.getElementById('input-name').value.trim();
+            const prefixe = ["Învățătoarea ", "Învățătorul "];
+            
+            let titluGasit = "", numeCurat = "";
+            prefixe.forEach(p => {
+                if(inputProf.startsWith(p)) { 
+                    titluGasit = p.trim(); 
+                    numeCurat = inputProf.replace(p, ""); 
+                }
+            });
+
+            if(!titluGasit) { 
+                alert("EROARE: Trebuie să scrii 'Învățătoarea ' sau 'Învățătorul ' înainte de nume!"); 
+                return; 
+            }
+
+            const profDataRaw = localStorage.getItem(`prof_${numeCurat}`);
+
+            if(!numeElev || !profDataRaw) {
+                alert(`EROARE: ${titluGasit} ${numeCurat} nu a fost găsit(ă) sau nu ai completat numele tău!`);
+                return;
+            }
+
+            const profData = JSON.parse(profDataRaw);
+            if(profData.titlu !== titluGasit) {
+                alert(`EROARE: Cadrul didactic este înregistrat ca ${profData.titlu}, nu ca ${titluGasit}!`);
+                return;
+            }
+
+            numeProfSalvat = numeCurat;
+            total = parseInt(document.getElementById('select-nr').value);
+            document.getElementById('screen-start').classList.add('hidden');
+            document.getElementById('screen-game').classList.remove('hidden');
+            urmatoarea();
+        };
+
+        function urmatoarea() {
+            if (index < total) {
+                a = Math.floor(Math.random() * 9) + 2; 
+                b = Math.floor(Math.random() * 9) + 2; 
+                rezultatCorect = a * b;
+
+                document.getElementById('question').innerText = `${a} × ${b}`;
+                document.getElementById('progress').innerText = `Exercițiul ${index + 1} din ${total}`;
+                document.getElementById('input-ans').value = "";
+                document.getElementById('message').innerText = "";
+                document.getElementById('input-ans').disabled = false;
+                document.getElementById('input-ans').focus();
+            } else {
+                finaliza();
+            }
+        }
+
+        document.getElementById('btn-check').onclick = verifica;
+        document.getElementById('input-ans').onkeypress = (e) => { if(e.key === 'Enter') verifica(); };
+
+        function verifica() {
+            let val = document.getElementById('input-ans').value.trim();
+            if(!val || document.getElementById('input-ans').disabled) return;
+            
+            document.getElementById('input-ans').disabled = true;
+            if(parseInt(val) === rezultatCorect) {
+                corecte++;
+                document.getElementById('message').innerText = "✅ CORECT!";
+                document.getElementById('message').style.color = "#27ae60";
+                index++;
+                setTimeout(urmatoarea, 700);
+            } else {
+                document.getElementById('message').innerText = "❌ GREȘIT! (" + rezultatCorect + ")";
+                document.getElementById('message').style.color = "#e94560";
+                index++;
+                setTimeout(urmatoarea, 1200);
+            }
+        }
+
+        function finaliza() {
+            let nota = ((corecte / total) * 10).toFixed(2);
+            let date = JSON.parse(localStorage.getItem('scoruri_tabla')) || [];
+            date.push({
+                nume: numeElev, 
+                profesor: numeProfSalvat, 
+                nota: nota,
+                data: new Date().toLocaleString('ro-RO'), 
+                detalii: `Înmulțire (${total} q)`
+            });
+            localStorage.setItem('scoruri_tabla', JSON.stringify(date));
+            
+            document.getElementById('result-info').innerHTML = `Elev: ${numeElev}<br>Nota obținută: <strong>${nota}</strong>`;
+            document.getElementById('screen-game').classList.add('hidden');
+            document.getElementById('screen-final').classList.remove('hidden');
+        }
+    </script>
+</body>
+</html>

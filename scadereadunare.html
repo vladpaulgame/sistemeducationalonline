@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Adunare/Scădere - Paul Vlad 2026</title>
+    <style>
+        :root { 
+            --bg: #05050a; 
+            --card: rgba(26, 26, 46, 0.8); 
+            --accent: #e94560; 
+            --green: #27ae60; 
+            --blue: #2980b9; 
+            --text: #ffffff; 
+        }
+
+        body { 
+            font-family: 'Segoe UI', sans-serif; 
+            background: var(--bg); 
+            /* Fundal animat cu gradiente */
+            background-image: 
+                radial-gradient(circle at 15% 25%, #1a1a4e 0%, transparent 30%),
+                radial-gradient(circle at 85% 75%, #4e1a1a 0%, transparent 30%);
+            background-attachment: fixed;
+            color: var(--text); 
+            display: flex; 
+            justify-content: center; 
+            align-items: center; 
+            min-height: 100vh; 
+            margin: 0; 
+            overflow: hidden;
+        }
+
+        .container { 
+            background: var(--card); 
+            backdrop-filter: blur(15px);
+            padding: 2.5rem; 
+            border-radius: 24px; 
+            text-align: center; 
+            width: 90%; 
+            max-width: 450px; 
+            box-shadow: 0 20px 50px rgba(0,0,0,0.6); 
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            animation: fadeIn 0.8s ease-out;
+        }
+
+        .hidden { display: none; }
+        h1 { font-weight: 700; letter-spacing: 2px; color: var(--accent); margin-bottom: 20px; text-transform: uppercase; }
+
+        input, select { 
+            width: 100%; padding: 14px; margin: 10px 0; border-radius: 10px; 
+            border: 1px solid rgba(255,255,255,0.1); background: rgba(0,0,0,0.3); 
+            color: white; font-size: 1.1rem; text-align: center; box-sizing: border-box;
+        }
+
+        button { 
+            width: 100%; padding: 16px; margin-top: 15px; border: none; border-radius: 12px; 
+            cursor: pointer; font-weight: 700; color: white; text-transform: uppercase; transition: all 0.3s ease;
+        }
+
+        #btn-start { background: linear-gradient(135deg, var(--green), #2ecc71); }
+        #btn-check { background: linear-gradient(135deg, var(--blue), #3498db); }
+        
+        #question { 
+            font-size: 4rem; font-weight: 700; margin: 25px 0; color: #f1c40f; 
+            text-shadow: 0 0 25px rgba(241, 196, 15, 0.4); animation: pulse 2s infinite;
+        }
+
+        #progress { color: #aaa; font-size: 0.9rem; }
+        #message { height: 35px; font-size: 1.2rem; font-weight: 600; margin-top: 10px; }
+
+        @keyframes fadeIn { from { opacity: 0; transform: scale(0.9); } to { opacity: 1; transform: scale(1); } }
+        @keyframes pulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.05); } }
+    </style>
+</head>
+<body>
+
+    <!-- ECRAN START -->
+    <div id="screen-start" class="container">
+        <h1>MATE QUIZ</h1>
+        <input type="text" id="input-name" placeholder="Numele tău (Elev)..." maxlength="20">
+        <input type="text" id="input-prof" placeholder="Ex: Învățătoarea Popescu Maria">
+        <select id="select-type">
+            <option value="add_no">Adunare (fără trecere)</option>
+            <option value="sub_no">Scădere (fără trecere)</option>
+            <option value="add_yes">Adunare (cu trecere)</option>
+            <option value="sub_yes">Scădere (cu trecere)</option>
+            <option value="all">TOATE Amestecate</option>
+        </select>
+        <select id="select-nr">
+            <option value="20">20 întrebări</option>
+            <option value="50">50 întrebări</option>
+            <option value="100">100 întrebări</option>
+        </select>
+        <button id="btn-start">CONECTARE LA PROFESOR</button>
+    </div>
+
+    <!-- ECRAN JOC -->
+    <div id="screen-game" class="container hidden">
+        <div id="progress">-- / --</div>
+        <div id="question">-- + --</div>
+        <div id="message"></div>
+        <input type="number" id="input-ans" placeholder="Răspuns..." inputmode="numeric">
+        <button id="btn-check">VERIFICĂ</button>
+    </div>
+
+    <!-- ECRAN FINAL -->
+    <div id="screen-final" class="container hidden">
+        <h1>FINALIZAT</h1>
+        <div id="result-text" style="font-size: 1.4rem; margin-bottom: 25px; line-height: 1.6;"></div>
+        <button onclick="location.reload()" style="background: linear-gradient(135deg, #8e44ad, #9b59b6);">REIA TESTUL</button>
+    </div>
+
+    <script>
+        let corecte = 0, index = 0, total = 0, numeJucator = "", numeProfSalvat = "", a, b, corectVal;
+
+        document.getElementById('btn-start').onclick = () => {
+            const inputProf = document.getElementById('input-prof').value.trim();
+            numeJucator = document.getElementById('input-name').value.trim() || "Elev";
+            const prefixe = ["Învățătoarea ", "Învățătorul "];
+            
+            let titluGasit = "", numeCurat = "";
+            prefixe.forEach(p => {
+                if(inputProf.startsWith(p)) { titluGasit = p.trim(); numeCurat = inputProf.replace(p, "").trim(); }
+            });
+
+            const profDataRaw = localStorage.getItem(`prof_${numeCurat}`);
+
+            if(!titluGasit || !profDataRaw) {
+                alert("EROARE: Trebuie să scrii 'Învățătoarea ' sau 'Învățătorul ' urmat de un nume valid înregistrat!");
+                return;
+            }
+
+            numeProfSalvat = numeCurat;
+            total = parseInt(document.getElementById('select-nr').value);
+            document.getElementById('screen-start').classList.add('hidden');
+            document.getElementById('screen-game').classList.remove('hidden');
+            urmatoarea();
+        };
+
+        function genereaza(tip) {
+            let t = tip === 'all' ? ['add_no','sub_no','add_yes','sub_yes'][Math.floor(Math.random()*4)] : tip;
+            if(t.includes('add_no')) { a = Math.floor(Math.random()*40)+10; b = Math.floor(Math.random()*(9-(a%10))); corectVal = a+b; return `${a} + ${b}`; }
+            if(t.includes('sub_no')) { a = Math.floor(Math.random()*80)+10; b = Math.floor(Math.random()*(a%10+1)); corectVal = a-b; return `${a} - ${b}`; }
+            if(t.includes('add_yes')) { a = Math.floor(Math.random()*45)+6; b = Math.floor(Math.random()*40)+(10-(a%10)); corectVal = a+b; return `${a} + ${b}`; }
+            if(t.includes('sub_yes')) { a = Math.floor(Math.random()*70)+20; b = Math.floor(Math.random()*9)+(a%10+1); if(b>=a) b=a-1; corectVal = a-b; return `${a} - ${b}`; }
+        }
+
+        function urmatoarea() {
+            if (index < total) {
+                document.getElementById('question').innerText = genereaza(document.getElementById('select-type').value);
+                document.getElementById('progress').innerText = `Exercițiul ${index+1} din ${total}`;
+                document.getElementById('input-ans').value = "";
+                document.getElementById('message').innerText = "";
+                document.getElementById('input-ans').disabled = false;
+                document.getElementById('input-ans').focus();
+            } else { finaliza(); }
+        }
+
+        function verifica() {
+            let val = document.getElementById('input-ans').value.trim();
+            if(!val || document.getElementById('input-ans').disabled) return;
+            document.getElementById('input-ans').disabled = true;
+
+            if(parseInt(val) === corectVal) {
+                corecte++;
+                document.getElementById('message').innerText = "✅ CORECT!";
+                document.getElementById('message').style.color = "#27ae60";
+                index++;
+                setTimeout(urmatoarea, 700);
+            } else {
+                document.getElementById('message').innerText = `❌ GREȘIT! (${corectVal})`;
+                document.getElementById('message').style.color = "#e94560";
+                index++;
+                setTimeout(urmatoarea, 1000);
+            }
+        }
+
+        function finaliza() {
+            let nota = ((corecte/total)*10).toFixed(2);
+            const tipTxt = document.getElementById('select-type').options[document.getElementById('select-type').selectedIndex].text;
+            let date = JSON.parse(localStorage.getItem('scoruri_tabla')) || [];
+            date.push({ nume: numeJucator, profesor: numeProfSalvat, nota: nota, data: new Date().toLocaleString('ro-RO'), detalii: tipTxt });
+            localStorage.setItem('scoruri_tabla', JSON.stringify(date));
+
+            document.getElementById('result-text').innerHTML = `
+                Bravo, <span style="color:var(--accent)">${numeJucator}</span>!<br>
+                Profesor: ${numeProfSalvat}<br>
+                Nota: <b style="font-size:2.2rem; color:#f1c40f">${nota}</b>
+            `;
+            document.getElementById('screen-game').classList.add('hidden');
+            document.getElementById('screen-final').classList.remove('hidden');
+        }
+
+        document.getElementById('btn-check').onclick = verifica;
+        document.getElementById('input-ans').onkeypress = (e) => { if(e.key === 'Enter') verifica(); };
+    </script>
+</body>
+</html>

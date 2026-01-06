@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin - MateQuiz 2026</title>
+    <link href="fonts.googleapis.com" rel="stylesheet">
+    <style>
+        :root { --bg: #05050a; --card: rgba(26, 26, 46, 0.8); --accent: #ff004c; --text: #ffffff; --success: #00ff88; }
+        body { font-family: 'Poppins', sans-serif; background: var(--bg); background-image: radial-gradient(circle at 20% 30%, #1a1a4e 0%, transparent 20%), radial-gradient(circle at 80% 70%, #4e1a1a 0%, transparent 20%); color: var(--text); display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; }
+        .container { background: var(--card); backdrop-filter: blur(15px); padding: 2.5rem; border-radius: 24px; width: 100%; max-width: 450px; box-shadow: 0 20px 50px rgba(0,0,0,0.6); border: 1px solid rgba(255, 255, 255, 0.1); text-align: center; }
+        .hidden { display: none; }
+        input, select { width: 100%; padding: 14px; margin: 10px 0; border-radius: 10px; border: 1px solid rgba(255,255,255,0.1); background: rgba(0,0,0,0.3); color: white; box-sizing: border-box; }
+        button { width: 100%; padding: 14px; margin-top: 10px; border: none; border-radius: 10px; cursor: pointer; font-weight: 600; text-transform: uppercase; transition: 0.3s; }
+        .btn-register { background: transparent; color: var(--success); border: 2px solid var(--success); }
+        .btn-login { background: var(--accent); color: white; }
+        .btn-forgot { background: none; color: #aaa; font-size: 0.8rem; margin-top: 10px; border: none; text-transform: none; display: inline-block; width: auto; }
+        .btn-forgot:hover { color: white; text-decoration: underline; }
+        .user-row { background: rgba(255,255,255,0.05); margin: 10px 0; padding: 15px; border-radius: 12px; border-left: 5px solid var(--accent); text-align: left; }
+    </style>
+</head>
+<body>
+    <div id="auth-box" class="container">
+        <h1>REGISTRARE</h1>
+        <select id="titlu-prof">
+            <option value="Învățătoarea">Învățătoarea</option>
+            <option value="Învățătorul">Învățătorul</option>
+        </select>
+        <input type="text" id="nume-prof" placeholder="Nume Complet (ex: Popescu Maria)">
+        <input type="email" id="email" placeholder="Email">
+        <input type="password" id="password" placeholder="Parolă">
+        
+        <button type="button" class="btn-register" onclick="handleAuth('register')">CREEAZĂ CONT</button>
+        <button type="button" class="btn-login" onclick="handleAuth('login')">LOGARE</button>
+        
+        <br>
+        <button type="button" class="btn-forgot" onclick="forgotPassword()">Am uitat parola</button>
+    </div>
+
+    <div id="results-box" class="container hidden" style="max-width: 600px;">
+        <h1 id="welcome-prof">PANOU REZULTATE</h1>
+        <div id="grouped-list"></div>
+        <button type="button" onclick="location.reload()" style="background:#333; color:white;">DECONECTARE</button>
+    </div>
+
+    <script>
+        function handleAuth(actionType) {
+            const titlu = document.getElementById('titlu-prof').value;
+            const nume = document.getElementById('nume-prof').value.trim();
+            const email = document.getElementById('email').value.trim();
+            const pass = document.getElementById('password').value;
+
+            if(actionType === 'register') {
+                if(!nume || !email || !pass) { alert("Completează toate câmpurile!"); return; }
+                const profData = { titlu: titlu, nume: nume, parola: pass, email: email };
+                
+                localStorage.setItem(`user_${email}`, JSON.stringify(profData));
+                localStorage.setItem(`prof_${nume}`, JSON.stringify(profData));
+                
+                alert(`Cont creat! Elevii tăi trebuie să scrie: ${titlu} ${nume}`);
+            } else {
+                const saved = JSON.parse(localStorage.getItem(`user_${email}`));
+                if(saved && saved.parola === pass) {
+                    showResults(saved.titlu, saved.nume);
+                } else {
+                    alert("Email sau parolă greșită!");
+                }
+            }
+        }
+
+        function forgotPassword() {
+            const emailField = document.getElementById('email').value.trim();
+            if(!emailField) {
+                alert("Te rugăm să introduci adresa de email în câmpul de mai sus.");
+                return;
+            }
+            
+            const dataRaw = localStorage.getItem(`user_${emailField}`);
+            if(dataRaw) {
+                const saved = JSON.parse(dataRaw);
+                alert("Bună ziua, " + saved.titlu + " " + saved.nume + "!\nParola dumneavoastră este: " + saved.parola);
+            } else {
+                alert("Nu am găsit niciun cont cu acest email în baza de date locală.");
+            }
+        }
+
+        function showResults(titlu, numeProf) {
+            document.getElementById('auth-box').classList.add('hidden');
+            document.getElementById('results-box').classList.remove('hidden');
+            document.getElementById('welcome-prof').innerText = titlu + " " + numeProf;
+            
+            const rawData = JSON.parse(localStorage.getItem('scoruri_tabla')) || [];
+            const filtered = rawData.filter(item => item.profesor === numeProf);
+            const listDiv = document.getElementById('grouped-list');
+            listDiv.innerHTML = filtered.length ? "" : "<p>Nicio notă primită încă.</p>";
+
+            const grouped = filtered.reduce((acc, curr) => {
+                if (!acc[curr.nume]) acc[curr.nume] = []; 
+                acc[curr.nume].push(curr); 
+                return acc;
+            }, {});
+
+            for (let elev in grouped) {
+                const div = document.createElement('div'); 
+                div.className = 'user-row';
+                div.innerHTML = `
+                    <div onclick="this.nextElementSibling.classList.toggle('hidden')" style="cursor:pointer; font-weight:bold;">
+                        👤 ${elev} (${grouped[elev].length} teste)
+                    </div>
+                    <div class="hidden" style="margin-top:10px; font-size:0.85rem;">
+                        ${grouped[elev].reverse().map(g => "<div>Nota: " + g.nota + " | " + (g.detalii || 'Test') + " | " + g.data + "</div>").join('')}
+                    </div>`;
+                listDiv.appendChild(div);
+            }
+        }
+    </script>
+</body>
+</html>
