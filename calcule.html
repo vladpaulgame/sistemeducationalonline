@@ -175,8 +175,15 @@
                 index++;
                 setTimeout(urmatoarea, 700);
             } else {
-                document.getElementById('message').innerText = "❌ GREȘIT! (" + rezultatCorect + ")";
+                 // Am eliminat (" + rezultatCorect + ") pentru a nu mai arăta răspunsul
+                document.getElementById('message').innerText = "❌ GREȘIT!"; 
                 document.getElementById('message').style.color = "#e94560";
+                index++;
+                setTimeout(urmatoarea, 1200);
+       }
+
+                
+                
                 index++;
                 setTimeout(urmatoarea, 1200);
             }
